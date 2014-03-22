@@ -52,12 +52,12 @@ class Crust:
 		Yn = (Acell-A)/Acell
 		return (A,Z,Yn)
 
-	def evolve(self,time=10000.0,mdot=0.1,n=10):
+	def evolve(self,time=10000.0,mdot=0.1,n=100):
 		print "Evolving in time for %g days at mdot=%g" % (time,mdot)
 		inic = numpy.array([item.T for item in self.grid])
-		times = 10.0**(numpy.arange(n)*log10(time)/(n-1))
-		result = odeint(self.derivs,inic,times*3600.0*24.0,rtol=1e-6,atol=1e-6,args=(mdot,))
-		for i,T in enumerate(result[-1,:]):
+		times = 10.0**(numpy.arange(n)*log10(time/self.zz)/(n-1))
+		result,info = odeint(self.derivs,inic,times*3600.0*24.0,rtol=1e-6,atol=1e-6,args=(mdot,),full_output=True)
+		for i,T in enumerate(result[-1,:]): 
 			self.grid[i].update_T(T)
 		Teff = [(self.envelope_flux(T)/5.67e-5)**0.25*1.38e-16/(1.6e-12*self.zz) for T in result[:,0]]
 		# returns the redshifted lightcurve
