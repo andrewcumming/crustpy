@@ -1,4 +1,5 @@
 from scipy.optimize import brentq
+import numpy
 
 class Eos:
 	def __init__(self,T=1e8,P=1e27,A=56,Z=26,Yn=0.0,Qimp=1):
@@ -8,22 +9,26 @@ class Eos:
 		self.Z=Z
 		self.Yn=Yn
 		self.Ye=(1.0-Yn)*(1.0*Z/A)
+		self.Acell=A/(1.0-Yn)
+		self.Yi=1.0/self.Acell
 		self.Qimp=Qimp
 		self.calculate_rho()
 		
 	def __str__(self):
-		return "P=%g rho=%g T=%g A=%g Z=%g Qimp=%g Yn=%g EFermi=%g ne=%g Ye=%g" % (self.P,self.rho,self.T,self.A,self.Z,self.Qimp,self.Yn,self.EFermi,self.ne,self.Ye)
+		return "P=%g rho=%g T=%g A=%g Z=%g Qimp=%g Yn=%g EFermi=%g ne=%g Ye=%g Acell=%g" % (self.P,self.rho,self.T,self.A,self.Z,self.Qimp,self.Yn,self.EFermi,self.ne,self.Ye,self.Acell)
 
 	def calculate_rho(self):
 		self.rho = brentq(self.pressure,2e7,2e14,xtol=1e-6)
 		self.ne = self.rho*self.Ye/1.67e-24
-		self.EFermi = 6.09e-11*self.ne**(1.0/3.0)     # in MeV
+		self.EFermi = 6.09e-11*self.ne**(1.0/3.0)     # T=0 EF in MeV
 
 	def pressure(self,rho):
+		# used in the root-find to find the density
 		self.rho=rho
 		Pe=1.231e15*(self.rho*self.Ye)**(4.0/3.0)
 		Pn=0.0
 		if self.Yn > 0.0:
+			# Neutron pressure from Mackie & Baym 
 			k=0.207*(1e-12*self.rho*self.Yn)**(1.0/3.0)
 			EFn=1.730*k+25.05*k*k-30.47*k*k*k+17.42*k*k*k*k
 			Pn=0.4*EFn*1.6e-6*self.rho*self.Yn/1.67e-24
@@ -37,8 +42,29 @@ class Eos:
 		return 1e21
 
 	def CV(self):
-		# Heat capacity
-		return 1e21
+		# Heat capacity has contributions from electrons, lattice, and neutrons
+		return self.CV_electrons()+self.CV_ions()+self.CV_neutrons()
+		
+	def CV_electrons(self):
+		# Electron contribution to the heat capacity
+		return 0.0
+
+	def CV_neutrons(self):
+		# Neutron contribution to the heat capacity
+		return 0.0
+
+	def CV_ions(self):
+		# Ion contribution to the heat capacity	
+		# from equation (5) of Chabrier 1993
+		# In the next line, we are using self.A as the mass of the nucleus (no entrainment)
+		eta=7.76e3*self.Z*(self.Yi*self.rho/self.A)**0.5/self.T
+		# x is alpha eta,  y is gamma eta
+		x,y = 0.399*eta, 0.899*eta
+		dd1=numpy.pi**4/(5*x**3) - 3.0*numpy.exp(-x)*(6.0+x*(6.0+x*(3.0+x)))/x**3
+		dd2=1.0-0.375*x+0.05*x**2
+		dd=min(dd1,dd2)
+		return 8.3144e7*self.Yi*(8.0*dd-6*x/(numpy.exp(x)-1.0)+(y**2*numpy.exp(y)/(numpy.exp(y)-1.0)**2))
+		
 		
 		
 if __name__ == '__main__':
