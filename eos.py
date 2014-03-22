@@ -21,6 +21,7 @@ class Eos:
 		self.rho = brentq(self.pressure,2e7,2e14,xtol=1e-6)
 		self.ne = self.rho*self.Ye/1.67e-24
 		self.EFermi = 6.09e-11*self.ne**(1.0/3.0)     # T=0 EF in MeV
+		self.x=self.EFermi/0.511
 
 	def pressure(self,rho):
 		# used in the root-find to find the density
@@ -39,18 +40,21 @@ class Eos:
 
 	def Kcond(self):
 		# Thermal conductivity
-		x=self.EFermi/0.511
-		# Impurity scattering frequency
-		lambda_eQ=1.0
-		feQ = 1.75e16*x*self.Qimp*lambda_eQ/self.Z
+		# phonon and impurity scattering
+		fc = self.fep() + self.feQ()
+		return 4.116e19*self.T*self.rho*self.Ye/(self.x*fc)
+	
+	def fep(self):
 		# Phonon scattering frequency
 		lambda_ep=1.0
 		TU=8.7*self.rho**0.5*(self.Ye/0.05)*(self.Z/30.0)**(1.0/3.0)
 		TD=3.5e3*self.Ye*self.rho**0.5
-		fep = 1.247e10*self.T*lambda_ep*numpy.exp(-TU/self.T)/(1.0+(TD/(3.5*self.T))**2)**0.5
-		# Total collision frequency
-		fc = fep + feQ
-		return 4.116e19*self.T*self.rho*self.Ye/(x*fc)
+		return 1.247e10*self.T*lambda_ep*numpy.exp(-TU/self.T)/(1.0+(TD/(3.5*self.T))**2)**0.5
+		
+	def feQ(self):
+		# Impurity scattering frequency
+		lambda_eQ=1.0
+		return 1.75e16*self.x*self.Qimp*lambda_eQ/self.Z
 				
 	def CV(self):
 		# Heat capacity has contributions from electrons, lattice, and neutrons

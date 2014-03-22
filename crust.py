@@ -1,7 +1,6 @@
 import ns
 import eos
 import numpy
-#import matplotlib.pyplot as plt
 
 class Crust:
 	def __init__(self,mass=1.4,radius=12.0,ngrid=30,Tc=1e8,Qimp=1):
@@ -17,7 +16,7 @@ class Crust:
 		for i in range(0,ngrid):
 			P = numpy.log10(P1) + numpy.log10(P2/P1)*i/(ngrid-1)
 			(A,Z,Yn) = self.composition(P)
-			grid_point = eos.Eos(P=10.0**P,Yn=Yn,A=A,Z=Z)
+			grid_point = eos.Eos(P=10.0**P,Yn=Yn,A=A,Z=Z,Qimp=Qimp)
 			self.grid.append(grid_point)
 						
 	def __str__(self):
@@ -42,8 +41,7 @@ class Crust:
 
 		
 if __name__ == '__main__':
-	crust = Crust(1.4,12.0,ngrid=30)
+	crust = Crust(1.4,12.0,ngrid=30,Qimp=1.0)
 	print crust
 	for item in crust.grid:
 		print item, 'K=%g' % (item.Kcond()), 'CV=%g' % (item.CV())
-	
