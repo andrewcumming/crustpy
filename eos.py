@@ -1,10 +1,12 @@
 from scipy.optimize import brentq
 import numpy
+from scipy import interpolate
+from math import exp, pi
 
 class Eos:
 	def __init__(self,T=1e8,P=1e27,A=56,Z=26,Yn=0.0,Qimp=1):
-		self.T=T
 		self.P=P
+		self.T=T
 		self.A=A
 		self.Z=Z
 		self.Yn=Yn
@@ -40,21 +42,16 @@ class Eos:
 
 	def Kcond(self):
 		# Thermal conductivity
-		# phonon and impurity scattering
-		fc = self.fep() + self.feQ()
-		return 4.116e19*self.T*self.rho*self.Ye/(self.x*fc)
-	
-	def fep(self):
 		# Phonon scattering frequency
 		lambda_ep=1.0
 		TU=8.7*self.rho**0.5*(self.Ye/0.05)*(self.Z/30.0)**(1.0/3.0)
 		TD=3.5e3*self.Ye*self.rho**0.5
-		return 1.247e10*self.T*lambda_ep*numpy.exp(-TU/self.T)/(1.0+(TD/(3.5*self.T))**2)**0.5
-		
-	def feQ(self):
+		fep=1.247e10*self.T*lambda_ep*exp(-TU/self.T)/(1.0+(TD/(3.5*self.T))**2)**0.5
 		# Impurity scattering frequency
 		lambda_eQ=1.0
-		return 1.75e16*self.x*self.Qimp*lambda_eQ/self.Z
+		feQ=1.75e16*self.x*self.Qimp*lambda_eQ/self.Z
+		fc = fep+feQ
+		return 4.116e19*self.T*self.rho*self.Ye/(self.x*fc)
 				
 	def CV(self):
 		# Heat capacity has contributions from electrons, lattice, and neutrons
@@ -62,23 +59,26 @@ class Eos:
 		
 	def CV_electrons(self):
 		# Electron contribution to the heat capacity
-		return 7.12e-3*numpy.pi**2*self.Ye*self.T/self.EFermi
+		return 7.12e-3*pi**2*self.Ye*self.T/self.EFermi
 
 	def CV_neutrons(self):
 		# Neutron contribution to the heat capacity
 		return 0.0
 
-	def CV_ions(self):
+	def CV_ions(self,setup=False):
 		# Ion contribution to the heat capacity	
 		# from equation (5) of Chabrier 1993
 		# In the next line, we are using self.A as the mass of the nucleus (no entrainment)
 		eta=7.76e3*self.Z*(self.Yi*self.rho/self.A)**0.5/self.T
 		# x is alpha eta,  y is gamma eta
-		x,y = 0.399*eta, 0.899*eta
-		dd1=numpy.pi**4/(5*x**3) - 3.0*numpy.exp(-x)*(6.0+x*(6.0+x*(3.0+x)))/x**3
+		x=0.399*eta
+		y=0.899*eta
+		ex=exp(x)
+		ey=exp(y)
+		dd1=pi**4/(5*x**3) - 3.0*(6.0+x*(6.0+x*(3.0+x)))/(ex*x**3)
 		dd2=1.0-0.375*x+0.05*x**2
 		dd=min(dd1,dd2)
-		return 8.26e7*self.Yi*(8.0*dd-6*x/(numpy.exp(x)-1.0)+(y**2*numpy.exp(y)/(numpy.exp(y)-1.0)**2))
+		return 8.26e7*self.Yi*(8.0*dd-6*x/(ex-1.0)+(y**2*ey/(ey-1.0)**2))
 		
 		
 		

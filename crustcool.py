@@ -24,23 +24,25 @@ cvi = numpy.array([item.CV_ions() for item in crust.grid])
 t, Teff = crust.evolve(time=10000,mdot=0.0)
 rho2, TT2 = crust.temperature_profile()
 
-# Plot the temperature profile and lightcurve
-plt.subplot(2,2,1)
-plt.loglog(rho,TT)
-plt.loglog(rho2,TT2)
-ax=plt.subplot(2,2,2)
-plt.plot(t,Teff)
-plt.plot(tobs,Teffobs,'ro')
-plt.xlim([1.0,1e4])
-plt.ylim([50.0,130.0])
-ax.set_xscale('log')
-plt.subplot(2,2,3)
-plt.loglog(rho,K)
-plt.subplot(2,2,4)
-plt.loglog(rho,cvi,'k-')
-plt.loglog(rho,cve,'k--')
-plt.loglog(rho,cve+cvi,'k')
-plt.show()
+
+if 1:
+	# Plot the temperature profile and lightcurve
+	plt.subplot(2,2,1)
+	plt.loglog(rho,TT)
+	plt.loglog(rho2,TT2)
+	ax=plt.subplot(2,2,2)
+	plt.plot(t,Teff)
+	plt.plot(tobs,Teffobs,'ro')
+	plt.xlim([1.0,1e4])
+	plt.ylim([50.0,130.0])
+	ax.set_xscale('log')
+	plt.subplot(2,2,3)
+	plt.loglog(rho,K)
+	plt.subplot(2,2,4)
+	plt.loglog(rho,cvi,'k-')
+	plt.loglog(rho,cve,'k--')
+	plt.loglog(rho,cve+cvi,'k')
+	plt.show()
 
 
 
