@@ -17,12 +17,15 @@ class Crust:
 		P1 = 1e12*2.28e14
 		P2 = 6.5e32
 		self.grid = []
+		self.P=[]
 		self.dx = log(P2/P1)/(ngrid-1)
 		for i in range(0,ngrid):
-			P = exp(log(P1) + self.dx*i)
-			(A,Z,Yn) = self.composition(P)
-			grid_point = eos.Eos(P=P,Yn=Yn,A=A,Z=Z,Qimp=Qimp,T=Tc)
+			this_P = exp(log(P1) + self.dx*i)
+			(A,Z,Yn) = self.composition(this_P)
+			grid_point = eos.Eos(P=this_P,Yn=Yn,A=A,Z=Z,Qimp=Qimp,T=Tc)
 			self.grid.append(grid_point)
+			self.P.append(this_P)
+		self.P=numpy.array(self.P)
 		# Read in the envelope Tb-Teff relation
 		F = numpy.array([float(line.split()[3]) for line in open('TbTeff','r')])
 		T = numpy.array([float(line.split()[2]) for line in open('TbTeff','r')])
@@ -56,6 +59,7 @@ class Crust:
 		print "Evolving in time for %g days at mdot=%g" % (time,mdot)
 		inic = numpy.array([item.T for item in self.grid])
 		times = 10.0**(numpy.arange(n)*log10(time/self.zz)/(n-1))
+		self.eps = numpy.array([mdot*self.crust_heating(P) for P in self.P])
 		result,info = odeint(self.derivs,inic,times*3600.0*24.0,rtol=1e-6,atol=1e-6,args=(mdot,),full_output=True)
 		for i,T in enumerate(result[-1,:]): 
 			self.grid[i].update_T(T)
@@ -65,18 +69,23 @@ class Crust:
 		
 	def derivs(self,T,time,mdot):
 		# calculate fluxes
-		K = [item.rho*self.g*item.Kcond()/item.P for item in self.grid]
-		# F[j] is the flux at j+1/2
-		F = [ 0.5*(K[j]+K[j+1])*(T[j+1]-T[j])/self.dx for j in range(0,self.ngrid-1)]
-		eps = [mdot*self.crust_heating(item.P) for item in self.grid]
-		# calculate dTdt
-		dTdt = [(eps[j] + (F[j]-F[j-1])/(self.dx*self.grid[j].P))*self.g/self.grid[j].CV() for j in range(1,self.ngrid-1)]
+		[self.grid[j].update_T(T[j]) for j in range(0,self.ngrid)]
+		vals = numpy.array([[item.rho*self.g*item.Kcond/item.P,item.CV] for item in self.grid])
+		K=vals[:,0]
+		cv=vals[:,1]
+		# F[j] is the flux at j-1/2
+		F=numpy.array([0.0]*self.ngrid)
+		F[1:] = 0.5*(K[:-1]+K[1:])*(T[1:]-T[:-1])
+		F/=self.dx
 		if mdot>0.0:
-			dTdt0=0.0
+			F[0]=F[1]
 		else:
-			dTdt0 = self.g*(F[0]-self.envelope_flux(T[0]))/(self.dx*self.grid[0].P*self.grid[0].CV())
-		return [dTdt0]+dTdt+[0.0]
-
+			F[0]=self.envelope_flux(T[0])
+		# calculate dTdt
+		dTdt=numpy.array([0.0]*self.ngrid)
+		dTdt[:-1] = (self.eps[:-1] + (F[1:]-F[:-1])/(self.dx*self.P[:-1]))*self.g/cv[:-1]
+		return dTdt
+		
 	def envelope_flux(self,T):
 		return 10.0**self.TbTeff(log10(T))
 
@@ -93,4 +102,4 @@ if __name__ == '__main__':
 	crust = Crust(1.4,12.0,ngrid=30,Qimp=1.0)
 	print crust
 	for item in crust.grid:
-		print item, 'K=%g' % (item.Kcond()), 'CV=%g' % (item.CV())
+		print item, 'K=%g' % (item.Kcond), 'CV=%g' % (item.CV)

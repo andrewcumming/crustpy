@@ -1,12 +1,11 @@
 from scipy.optimize import brentq
 import numpy
-from scipy import interpolate
+from scipy import interpolate, weave
 from math import exp, pi, sqrt, log
 
 class Eos:
 	def __init__(self,T=1e8,P=1e27,A=56,Z=26,Yn=0.0,Qimp=1):
 		self.P=P
-		self.T=T
 		self.A=A
 		self.Z=Z
 		self.Yn=Yn
@@ -15,9 +14,10 @@ class Eos:
 		self.Yi=1.0/self.Acell
 		self.Qimp=Qimp
 		self.calculate_rho()
+		self.update_T(T)
 		
 	def __str__(self):
-		return "P=%g rho=%g T=%g A=%g Z=%g Qimp=%g Yn=%g EFermi=%g ne=%g Ye=%g Acell=%g Tp=%g" % (self.P,self.rho,self.T,self.A,self.Z,self.Qimp,self.Yn,self.EFermi,self.ne,self.Ye,self.Acell,self.TP)
+		return "P=%g rho=%g T=%g A=%g Z=%g Qimp=%g Yn=%g EFermi=%g ne=%g Ye=%g Acell=%g Tp=%g CV=%g Kcond=%g" % (self.P,self.rho,self.T,self.A,self.Z,self.Qimp,self.Yn,self.EFermi,self.ne,self.Ye,self.Acell,self.TP,self.CV,self.Kcond)
 
 	def calculate_rho(self):
 		self.rho = brentq(self.pressure,2e7,2e14,xtol=1e-6)
@@ -39,8 +39,10 @@ class Eos:
 		
 	def update_T(self,T):
 		self.T=T
+		self.Kcond=self.calculate_Kcond()
+		self.CV=self.calculate_CV()
 
-	def Kcond(self):
+	def calculate_Kcond(self):
 		# Thermal conductivity
 		# Phonon scattering frequency
 		lambda_ep=1.0		
@@ -53,7 +55,7 @@ class Eos:
 		fc = fep+feQ
 		return 4.116e19*self.T*self.rho*self.Ye/(self.x*fc)
 				
-	def CV(self):
+	def calculate_CV(self):
 		# Heat capacity has contributions from electrons, lattice, and neutrons
 		return self.CV_electrons()+self.CV_ions()+self.CV_neutrons()
 		
@@ -68,7 +70,7 @@ class Eos:
 	def CV_ions(self):
 		# Ion contribution to the heat capacity	
 		# from equation (5) of Chabrier 1993
-		eta=self.TP/self.T
+		eta=self.TP/self.T			
 		# x is alpha eta,  y is gamma eta
 		x=0.399*eta
 		y=0.899*eta
@@ -77,8 +79,8 @@ class Eos:
 		dd1=pi**4/(5*x**3) - 3.0*(6.0+x*(6.0+x*(3.0+x)))/(ex*x**3)
 		dd2=1.0-0.375*x+0.05*x**2
 		dd=min(dd1,dd2)
-		return 8.26e7*self.Yi*(8.0*dd-6*x/(ex-1.0)+(y**2*ey/(ey-1.0)**2))
-		
+		fac=8.0*dd-6*x/(ex-1.0)+(y**2*ey/(ey-1.0)**2)
+		return 8.26e7*self.Yi*fac
 		
 		
 if __name__ == '__main__':

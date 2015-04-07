@@ -9,17 +9,17 @@ tobs = numpy.array([52197.8,52563.2,52712.2,52768.9,53560.0,53576.7,54583.8,5611
 Teffobs = numpy.array([121,85,77,73,58,54,56,48.8])
 
 # Initialize the crust
-crust = Crust(mass=1.6,radius=11.2,ngrid=30,Qimp=3.0,Tc=3e7)
+crust = Crust(mass=1.6,radius=11.2,ngrid=30,Qimp=4.0,Tc=3e7)
 print crust
 
 # Set the top temperature and accrete
 crust.set_top_temperature(4e8)
 t, Teff = crust.evolve(time=2.5*365.0,mdot=0.1)
 rho, TT = crust.temperature_profile()
-K = numpy.array([item.Kcond() for item in crust.grid])
+K = numpy.array([item.Kcond for item in crust.grid])
 cve = numpy.array([item.CV_electrons() for item in crust.grid])
 cvi = numpy.array([item.CV_ions() for item in crust.grid])
-cv = numpy.array([item.CV() for item in crust.grid])
+cv = numpy.array([item.CV for item in crust.grid])
 
 # Now turn off accretion and cool
 t, Teff = crust.evolve(time=10000,mdot=0.0)
