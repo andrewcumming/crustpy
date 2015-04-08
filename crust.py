@@ -6,7 +6,7 @@ from scipy import interpolate
 from math import log, exp, log10
 
 class Crust:
-	def __init__(self,mass=1.4,radius=12.0,ngrid=30,Tc=1e8,Qimp=1):
+	def __init__(self,mass=1.4,radius=12.0,ngrid=30,Tc=1e8,Qimp=1,shallow_heating=False,shallow_y=1e13,shallow_Q=1.0,cooling_bc=False):
 		self.mass = mass
 		self.radius = radius
 		self.g,self.zz = ns.grav(mass,radius)
@@ -14,6 +14,10 @@ class Crust:
 		self.ngrid=ngrid
 		self.Tc = Tc
 		self.Qimp = Qimp
+		self.shallow_heating = shallow_heating
+		self.shallow_Q = shallow_Q
+		self.shallow_y = shallow_y
+		self.cooling_bc = cooling_bc
 		P1 = 1e12*2.28e14
 		P2 = 6.5e32
 		self.grid = []
@@ -77,7 +81,7 @@ class Crust:
 		F=numpy.array([0.0]*self.ngrid)
 		F[1:] = 0.5*(K[:-1]+K[1:])*(T[1:]-T[:-1])
 		F/=self.dx
-		if mdot>0.0:
+		if mdot>0.0 and not self.cooling_bc:
 			F[0]=F[1]
 		else:
 			F[0]=self.envelope_flux(T[0])
@@ -91,11 +95,29 @@ class Crust:
 
 	def crust_heating(self,P):
 		# simple "smeared out" heating function, 1.2MeV in inner crust, 0.2MeV in outer crust
-		if P>=1e16*2.28e14 and P<=1e17*2.28e14:
-			return 8.8e4*1.7*9.64e17/(P*log(1e17/1e16));
-	 	if P>=3e12*2.28e14 and P<3e15*2.28e14:
-			return 8.8e4*0.2*9.64e17/(P*log(3e15/3e12));
-		return 0.0
+		heat = 0.0
+		geff = 2.28e14  # gravity used to convert column to pressure
+		if P>=1e16*geff and P<=1e17*geff:
+			heat += 8.8e4*1.7*9.64e17/(P*log(1e17/1e16));
+	 	if P>=3e12*geff and P<3e15*geff:
+			heat += 8.8e4*0.2*9.64e17/(P*log(3e15/3e12));
+		# shallow heat source
+		shallow_heat=0.0
+		if self.shallow_heating:
+			P1 = P*exp(-0.5*self.dx)
+			P2 = P*exp(0.5*self.dx)
+			shallow_y1 = self.shallow_y/3.0	
+			shallow_y2 = self.shallow_y*3.0
+			if P1 > shallow_y1*geff and P2 < shallow_y2*geff:  # we are within the heating zone
+				shallow_heat=8.8e4*self.shallow_Q*9.64e17/(P*log(shallow_y2/shallow_y1))
+			if P1 < shallow_y1*geff and P2 < shallow_y2*geff and shallow_y1*geff<P2:   # left hand edge of heated region
+				shallow_heat=8.8e4*self.shallow_Q*9.64e17/(P*log(shallow_y2/shallow_y1))
+				shallow_heat *= log(P2/(shallow_y1*geff))/self.dx
+			if P1 > shallow_y1*geff and P2 > shallow_y2*geff and shallow_y2*geff > P1: # right hand edge of heated region
+				shallow_heat=8.8e4*self.shallow_Q*9.64e17/(P*log(shallow_y2/shallow_y1))
+				shallow_heat *= log(shallow_y2*geff/P1)/self.dx
+			heat += shallow_heat
+		return heat
 
 
 if __name__ == '__main__':
