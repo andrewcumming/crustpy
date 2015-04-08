@@ -9,65 +9,64 @@ tobs = numpy.array([52197.8,52563.2,52712.2,52768.9,53560.0,53576.7,54583.8,5611
 Teffobs = numpy.array([121,85,77,73,58,54,56,48.8])
 
 # Initialize the crust
-crust = Crust(mass=1.6,radius=11.2,ngrid=30,Qimp=4.0,Tc=3e7)
+crust = Crust(mass=1.62,radius=11.2,ngrid=30,Qimp=6.0,Tc=3.1e7)
 print crust
 
 # Set the top temperature and accrete
-crust.set_top_temperature(4e8)
+crust.set_top_temperature(4.7e8)
 t, Teff = crust.evolve(time=2.5*365.0,mdot=0.1)
+
+# store the initial temperature, conductivity and CV profile for the plots
 rho, TT = crust.temperature_profile()
 K = numpy.array([item.Kcond for item in crust.grid])
 cve = numpy.array([item.CV_electrons() for item in crust.grid])
 cvi = numpy.array([item.CV_ions() for item in crust.grid])
 cv = numpy.array([item.CV for item in crust.grid])
+# print out crust profile just before cooling begins:
+#for item in crust.grid:
+#	print item, 'K=%g' % (item.Kcond), 'CV=%g' % (item.CV)
 
 # Now turn off accretion and cool
 t, Teff = crust.evolve(time=10000,mdot=0.0)
+
+# Final temperature profile to plot
 rho2, TT2 = crust.temperature_profile()
 
 if 1:
 	# Plot the temperature profile and lightcurve
 	plt.subplot(2,2,1)
+	plt.xlim([1e8,2e14])
 	plt.loglog(rho,TT)
 	plt.loglog(rho2,TT2)
+	plt.xlabel(r'$\rho (g/cm^3)$')
+	plt.ylabel(r'$T (K)$')
 
 	ax=plt.subplot(2,2,2)
 	plt.plot(t,Teff)
 	plt.plot(tobs,Teffobs,'ro')
-	plt.xlim([1.0,1e4])
+	plt.xlim([10.0,1e4])
 	plt.ylim([50.0,130.0])
 	ax.set_xscale('log')
+	plt.xlabel(r'$t (d)$')
+	plt.ylabel(r'$T_{eff} (eV)$')
 
 	plt.subplot(2,2,3)
+	plt.xlim([1e8,2e14])
 	plt.loglog(rho,K)
+	plt.xlabel(r'$\rho (g/cm^3)$')
+	plt.ylabel(r'$K (cgs)$')
 
 	plt.subplot(2,2,4)
+	plt.xlim([1e8,2e14])
 	plt.loglog(rho,cvi,'k-')
 	plt.loglog(rho,cve,'k--')
 	plt.loglog(rho,cve+cvi,'k')
 	plt.loglog(rho,cv,'b')
+	plt.xlabel(r'$\rho (g/cm^3)$')
+	plt.ylabel(r'$CV (erg/g/K)$')
 
+	plt.tight_layout()
+
+	#plt.show()
 	plt.savefig('crustcool.pdf')
 	print 'Saved plots to crustcool.pdf'
-
-
-
-if 0:
-	for item in crust.grid:
-		print item, 'K=%g' % (item.Kcond()), 'CV=%g' % (item.CV())
-
-	rho = numpy.array([item.rho for item in crust.grid])
-	cve = numpy.array([item.CV_electrons() for item in crust.grid])
-	cvi = numpy.array([item.CV_ions() for item in crust.grid])
-	K = numpy.array([item.Kcond() for item in crust.grid])
-	Kp = numpy.array([item.Kcond()*(item.fep()+item.feQ())/item.fep() for item in crust.grid])
-
-	plt.subplot(2,1,1)
-	plt.loglog(rho,K)
-	plt.loglog(rho,Kp,'--')
-	plt.subplot(2,1,2)
-	plt.loglog(rho,cvi,'r')
-	plt.loglog(rho,cve,'b')
-	plt.loglog(rho,cve+cvi,'k')
-	plt.show()
-	
