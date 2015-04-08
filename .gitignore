@@ -1,3 +1,4 @@
 *.pyc
 *.tmproj
 *.pdf
+.ipynb_checkpoints/*
