@@ -1,4 +1,4 @@
 ### crustpy
 
 This code follows the thermal evolution of a neutron star crust.
-Try `python crustcool.py` to run a model that fits the MXB 1659 lightcurve (see [Brown & Cumming 2009](http://iopscience.iop.org/0004-637X/698/2/1020)); the output is plotted in `crustcool.pdf`
+An IPython notebook is included that shows how to run a model of the MXB 1659 lightcurve (see [Brown & Cumming 2009](http://iopscience.iop.org/0004-637X/698/2/1020)). Alternatively, use `python crustcool.py` which plots the results in `crustcool.pdf`.
