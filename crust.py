@@ -95,30 +95,28 @@ class Crust:
 
 	def crust_heating(self,P):
 		# simple "smeared out" heating function, 1.2MeV in inner crust, 0.2MeV in outer crust
-		heat = 0.0
-		geff = 2.28e14  # gravity used to convert column to pressure
-		if P>=1e16*geff and P<=1e17*geff:
-			heat += 8.8e4*1.7*9.64e17/(P*log(1e17/1e16));
-	 	if P>=3e12*geff and P<3e15*geff:
-			heat += 8.8e4*0.2*9.64e17/(P*log(3e15/3e12));
+		heat = self.heat_source(P,1e16,1e17,1.7)
+		heat += self.heat_source(P,3e12,3e15,0.2)
 		# shallow heat source
-		shallow_heat=0.0
 		if self.shallow_heating:
-			P1 = P*exp(-0.5*self.dx)
-			P2 = P*exp(0.5*self.dx)
-			shallow_y1 = self.shallow_y/3.0	
-			shallow_y2 = self.shallow_y*3.0
-			if P1 > shallow_y1*geff and P2 < shallow_y2*geff:  # we are within the heating zone
-				shallow_heat=8.8e4*self.shallow_Q*9.64e17/(P*log(shallow_y2/shallow_y1))
-			if P1 < shallow_y1*geff and P2 < shallow_y2*geff and shallow_y1*geff<P2:   # left hand edge of heated region
-				shallow_heat=8.8e4*self.shallow_Q*9.64e17/(P*log(shallow_y2/shallow_y1))
-				shallow_heat *= log(P2/(shallow_y1*geff))/self.dx
-			if P1 > shallow_y1*geff and P2 > shallow_y2*geff and shallow_y2*geff > P1: # right hand edge of heated region
-				shallow_heat=8.8e4*self.shallow_Q*9.64e17/(P*log(shallow_y2/shallow_y1))
-				shallow_heat *= log(shallow_y2*geff/P1)/self.dx
-			heat += shallow_heat
+			heat += self.heat_source(P,self.shallow_y/3.0,self.shallow_y*3.0,self.shallow_Q)
 		return heat
 
+	def heat_source(self,P,y1,y2,Q):
+		heat = 0.0
+		P1 = P*exp(-0.5*self.dx)
+		P2 = P*exp(0.5*self.dx)
+		geff = 2.28e14  # gravity used to convert column to pressure
+		if P1 > y1*geff and P2 < y2*geff:  # we are within the heating zone
+			heat=8.8e4*Q*9.64e17/(P*log(y2/y1))
+		if P1 < y1*geff and P2 < y2*geff and y1*geff<P2:   # left hand edge of heated region
+			heat=8.8e4*Q*9.64e17/(P*log(y2/y1))
+			heat *= log(P2/(y1*geff))/self.dx
+		if P1 > y1*geff and P2 > y2*geff and y2*geff > P1: # right hand edge of heated region
+			heat=8.8e4*Q*9.64e17/(P*log(y2/y1))
+			heat *= log(y2*geff/P1)/self.dx
+		return heat
+		
 
 if __name__ == '__main__':
 	crust = Crust(1.4,12.0,ngrid=30,Qimp=1.0)
