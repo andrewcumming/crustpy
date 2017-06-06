@@ -1,7 +1,9 @@
 from crust import *
 import numpy
 import matplotlib.pyplot as plt
+import matplotlib
 import time
+matplotlib.rcParams.update({'font.size': 8})
 
 # These are the 1659 temperature measurements
 t0 = 52159.5
@@ -9,7 +11,7 @@ tobs = numpy.array([52197.8,52563.2,52712.2,52768.9,53560.0,53576.7,54583.8,5611
 Teffobs = numpy.array([121,85,77,73,58,54,56,48.8])
 
 # Initialize the crust
-crust = Crust(mass=1.62,radius=11.2,ngrid=30,Qimp=6.0,Tc=3.1e7)
+crust = Crust(mass=1.62,radius=11.2,ngrid=100,Qimp=6.0,Tc=3.1e7)
 print(crust)
 
 # Set the top temperature and accrete
@@ -43,7 +45,7 @@ if 1:
 
 	ax=plt.subplot(2,2,2)
 	plt.plot(t,Teff)
-	plt.plot(tobs,Teffobs,'ro')
+	plt.plot(tobs,Teffobs,'ro',markersize=2)
 	plt.xlim([10.0,1e4])
 	plt.ylim([50.0,130.0])
 	ax.set_xscale('log')
