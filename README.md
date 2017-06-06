@@ -10,6 +10,9 @@ An [IPython notebook](https://github.com/andrewcumming/crustpy/blob/master/crust
 
 During accretion, the temperature at the top of the grid can be held constant, or allowed to cool and a shallow heat source included at low density.
 
+Interactive version using [bokeh](http://bokeh.pydata.org/en/latest/):
+`bokeh serve --show crustcool_bokeh.py`
+
 Note the limited microphysics included in this code (to-do list):
 * it is assumed the neutrons do not contribute to heat capacity (density-dependent gap not included)
 * Coulomb log for electron-phonon scattering is set to unity
