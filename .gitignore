@@ -2,3 +2,6 @@
 *.tmproj
 *.pdf
 .ipynb_checkpoints/*
+*.so
+*.c
+*.o
