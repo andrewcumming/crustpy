@@ -25,7 +25,7 @@ def do_outburst():
 
 # default parameters
 def set_defaults():
-	return dict(Qimp = 6.0, Tb = 4.7e8, Tc = 3.1e7, M=1.62, R=11.2, mdot =0.1, tout=2.5)
+	return dict(Qimp = 3.2, Tb = 4.2e8, Tc = 3.1e7, M=1.62, R=11.2, mdot =0.1, tout=2.5)
 
 # Handlers for the different controls
 def Q_slider_handler(attrname, old, new):
@@ -98,7 +98,7 @@ go_button.on_click(button_handler)
 def_button = Button(label="Defaults", button_type="default")
 def_button.on_click(def_handler)
 
-Q_slider = Slider(title="Qimp", value=params['Qimp'], start=0.0, end=100.0, step=0.1)
+Q_slider = Slider(title="Qimp", value=params['Qimp'], start=0.0, end=30.0, step=0.1)
 Q_slider.on_change('value', Q_slider_handler)
 
 Tb_slider = Slider(title="Top temperature (1e8 K)", value=params['Tb']/1e8, start=0.3, end=10.0, step=0.1)
