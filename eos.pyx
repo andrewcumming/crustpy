@@ -1,7 +1,15 @@
 #cython: boundscheck=False, wraparound=False, nonecheck=False, cdivision=True
 from scipy.optimize import brentq
-#from numpy import pi
+#from scipy.special import expn  #	#expn(1,x) exponential integral for coul log
 from libc.math cimport exp, log, sqrt
+
+#cdef extern from "potek_wrapper.c":
+#	double potek_cond(double rho, double T, double A, double Z, double Yn, double Qimp)
+
+cdef extern:
+	void condegin_(double *temp,double *densi,double *B,double *Zion,double *CMI,
+			double *CMI1,double *Zimp, double *RSIGMA,double *RTSIGMA,
+			double *RHSIGMA,double *RKAPPA,double *RTKAPPA,double *RHKAPPA)
 
 def init_eos(double T=1e8,double P=1e27,double A=56,double Z=26,double Yn=0.0,double Qimp=1):
 	cdef double Acell = A/(1.0-Yn)
@@ -41,18 +49,23 @@ cdef double pressure(double rho,double Yn, double Ye, double P):
 	EFn=1.730*k+25.05*k*k-30.47*k*k*k+17.42*k*k*k*k
 	Pn=0.4*EFn*1.6e-6*rho*Yn/1.67e-24
 	return Pe + Pn - P
-		
+	
 def update_T(eos,double T):
 	cdef double TP = eos['TP']
 	cdef double Ye = eos['Ye']
 	cdef double Yi = eos['Yi']
+	cdef double Yn = eos['Yn']
+	cdef double A = eos['A']
 	cdef double x = eos['x']
 	cdef double Z = eos['Z']
 	cdef double EFermi = eos['EFermi']
 	cdef double Qimp = eos['Qimp']
 	cdef double rho = eos['rho']
 	eos['T']=T
-	eos['Kcond'] = calculate_Kcond(T,Ye,Z,x,Qimp,rho)
+	# simpler version of conductivity that has lambda_ep set to 1
+	# (gives ~factor of 2 difference in derived Qimp for MXB 1659)
+	#eos['Kcond'] = calculate_Kcond(T,Ye,Z,x,Qimp,rho)
+	eos['Kcond'] = potek_cond(rho,T,A,Z,Yn,Qimp)
 	eos['CV_electrons'] = CV_electrons(T,Ye,EFermi)
 	eos['CV_ions'] = CV_ions(T,TP,Yi)
 	eos['CV_neutrons'] = CV_neutrons(T)
@@ -60,6 +73,17 @@ def update_T(eos,double T):
 	#eos['CV'] = calculate_CV(T,TP,Ye,Yi,EFermi)
 	return eos
 
+def potek_cond(double rho, double T, double A, double Z, double Yn, double Qimp):
+	# returns the thermal conductivity in cgs from Potekhin's fortran code
+	cdef double s1,s2,s3,k1,k2,k3
+	cdef double Zimp = sqrt(Qimp)
+	cdef double Acell = A / (1.0-Yn)
+	cdef double Bfield = 0.0
+	cdef double temp = T*1e-6/5930.0
+	cdef double rr = rho/(Acell*15819.4*1822.9)
+	condegin_(&temp,&rr,&Bfield,&Z,&A,&Acell,&Zimp, &s1,&s2,&s3,&k1,&k2,&k3)
+	return k1*2.778e15
+	
 cdef double calculate_Kcond(double T,double Ye,double Z,double x,double Qimp,double rho):
 	# Thermal conductivity
 	cdef double lambda_ep
@@ -71,7 +95,7 @@ cdef double calculate_Kcond(double T,double Ye,double Z,double x,double Qimp,dou
 	TD=3.5e3*Ye*sqrt(rho)
 	fep=1.247e10*T*lambda_ep*exp(-TU/T)/sqrt(1.0+(TD/(3.5*T))**2)
 	# Impurity scattering frequency
-	lambda_eQ=0.5*log(1.0+0.4*137.0*mypi)*(1.0+2.5/(137.0*mypi))-0.5
+	lambda_eQ=2.09 # = 0.5*log(1.0+0.4*137.0*mypi)*(1.0+2.5/(137.0*mypi))-0.5
 	feQ=1.75e16*x*Qimp*lambda_eQ/Z
 	fc = fep+feQ
 	return 4.116e19*T*rho*Ye/(x*fc)
@@ -105,3 +129,4 @@ cdef double CV_ions(double T, double TP, double Yi):
 	dd=min(dd1,dd2)
 	fac=8.0*dd-6*x/(ex-1.0)+(y**2*ey/(ey-1.0)**2)
 	return 8.26e7*Yi*fac
+	

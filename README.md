@@ -13,9 +13,6 @@ During accretion, the temperature at the top of the grid can be held constant, o
 Interactive version using [bokeh](http://bokeh.pydata.org/en/latest/):
 `bokeh serve --show crustcool_bokeh.py`
 
-Note the limited microphysics included in this code (to-do list):
-* it is assumed the neutrons do not contribute to heat capacity (density-dependent gap not included)
-* Coulomb log for electron-phonon scattering is set to unity
-* no entrainment of neutrons by the nuclei in the inner crust
-* neutron pressure taken from Mackie & Baym
-
+To-do list:
+* add neutron heat capacity (with density-dependent gap)
+* add entrainment of neutrons by the nuclei in the inner crust (no entrainment assumed at the moment)
