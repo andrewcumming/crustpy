@@ -14,5 +14,4 @@ Interactive version using [bokeh](http://bokeh.pydata.org/en/latest/):
 `bokeh serve --show crustcool_bokeh.py`
 
 To-do list:
-* add neutron heat capacity (with density-dependent gap)
 * add entrainment of neutrons by the nuclei in the inner crust (no entrainment assumed at the moment)
