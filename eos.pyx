@@ -1,10 +1,7 @@
 #cython: boundscheck=False, wraparound=False, nonecheck=False, cdivision=True
-from scipy.optimize import brentq
-#from scipy.special import expn  #	#expn(1,x) exponential integral for coul log
-from libc.math cimport exp, log, sqrt
 
-#cdef extern from "potek_wrapper.c":
-#	double potek_cond(double rho, double T, double A, double Z, double Yn, double Qimp)
+from scipy.optimize import brentq
+from libc.math cimport exp, log, sqrt
 
 cdef extern:
 	void condegin_(double *temp,double *densi,double *B,double *Zion,double *CMI,
@@ -68,12 +65,12 @@ def update_T(eos,double T):
 	eos['Kcond'] = potek_cond(rho,T,A,Z,Yn,Qimp)
 	eos['CV_electrons'] = CV_electrons(T,Ye,EFermi)
 	eos['CV_ions'] = CV_ions(T,TP,Yi)
-	eos['CV_neutrons'] = CV_neutrons(T)
+	eos['CV_neutrons'] = CV_neutrons(rho, T, Yn)
 	eos['CV'] = eos['CV_electrons'] + eos['CV_ions'] + eos['CV_neutrons']
-	#eos['CV'] = calculate_CV(T,TP,Ye,Yi,EFermi)
+	#eos['CV'] = calculate_CV(rho, T,TP,Ye,Yi,EFermi, Yn)
 	return eos
 
-def potek_cond(double rho, double T, double A, double Z, double Yn, double Qimp):
+cdef double potek_cond(double rho, double T, double A, double Z, double Yn, double Qimp):
 	# returns the thermal conductivity in cgs from Potekhin's fortran code
 	cdef double s1,s2,s3,k1,k2,k3
 	cdef double Zimp = sqrt(Qimp)
@@ -100,19 +97,15 @@ cdef double calculate_Kcond(double T,double Ye,double Z,double x,double Qimp,dou
 	fc = fep+feQ
 	return 4.116e19*T*rho*Ye/(x*fc)
 				
-cdef double calculate_CV(double T,double TP,double Ye,double Yi,double EFermi):
+cdef double calculate_CV(double rho, double T,double TP,double Ye,double Yi,double EFermi, double Yn):
 	# Heat capacity has contributions from electrons, lattice, and neutrons
-	return CV_electrons(T,Ye,EFermi) + CV_ions(T,TP,Yi) + CV_neutrons(T)
+	return CV_electrons(T,Ye,EFermi) + CV_ions(T,TP,Yi) + CV_neutrons(rho, T, Yn)
 	
 cdef double CV_electrons(double T, double Ye, double EFermi):
 	# Electron contribution to the heat capacity
 	cdef double mypi = 3.141592654
 	return 7.12e-3*mypi**2*Ye*T/EFermi
 	
-cdef double CV_neutrons(double T):
-	# Neutron contribution to the heat capacity
-	return 0.0
-
 cdef double CV_ions(double T, double TP, double Yi):
 	# Ion contribution to the heat capacity	
 	# from equation (5) of Chabrier 1993
@@ -129,4 +122,61 @@ cdef double CV_ions(double T, double TP, double Yi):
 	dd=min(dd1,dd2)
 	fac=8.0*dd-6*x/(ex-1.0)+(y**2*ey/(ey-1.0)**2)
 	return 8.26e7*Yi*fac
+
+cdef double CV_neutrons(double rho, double T, double Yn):
+	# Neutron contribution to the heat capacity
+	cdef double k, EFn, cvneut
+	cdef double R00, t, u
+
+	if Yn == 0.0:
+		return 0.0
+	# Mackie and Baym
+	k = 0.207*(1e-12*rho*Yn)**(1.0/3.0)
+	EFn = 1.730*k + 25.05*k*k - 30.47*k*k*k + 17.42*k*k*k*k # in MeV
+	cvneut = 0.5*3.1415*3.1415*8.3144e7*Yn * 1.38e-16*T/(EFn*1.6e-6)
+
+	# gap suppression
+	t = T / TC(rho, T, Yn)	
+	if t>1.0:
+		R00 = 1.0
+	else:
+		u = sqrt(1.0-t)*(1.456 - 0.157/sqrt(t)+1.764/t)
+		R00 = (0.4186 + sqrt(1.007*1.007 + (0.5010*u)**2.0))**2.5 * exp(1.456 - sqrt(1.456*1.456+u*u))
+	if R00 < 1e-8:
+		R00 = 0.0
+	cvneut *= R00
+
+	return cvneut
+
+cdef double TC(double rho, double T, double Yn):
+	# calculates the critical temp for neutron superfluidity in the crust
+	cdef double k, Tcrit, delk, a, b, t
+	cdef int i1, i2, i
+	cdef double k0[17]
+	cdef double d0[17]
+	cdef double d2[17]
 	
+	# neutron k_F in fm^-1
+	k = 0.261*(1e-12*rho*Yn)**(1.0/3.0)
+	
+	# gap from SFB03
+	k0 = (0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.175,1.25, 1.3, 1.35, 1.4, 1.45)
+	d0 = (0.0, 0.09, 0.210, 0.360, 0.500, 0.610, 0.720, 0.790, 0.780,0.700, 0.580, 0.450, 0.280, 0.190, 0.100, 0.030, 0.0)
+	d2 = (2.915e1, -4.297, 6.040, -1.863, -4.59, 2.221, -4.296,-9.037, -7.555, -2.741, -5.480, -1.344e1, 1.656e1, -6.667,1.010e1, 1.426e1, 2.887e1)
+	if k < k0[0] or k > k0[16]:
+		return 0.0
+	i1=0
+	i2=16
+	while (i2-i1)>1:
+		i = (i2+i1)/2
+		if k0[i]>k:
+			i2 = i
+		else:
+			i1 = i
+	delk = k0[i2]-k0[i1]
+	a = (k0[i2]-k)/delk
+	b = (k-k0[i1])/delk
+	t = a*d0[i1] + b*d0[i2] + (((a**3.0)-a)*d2[i1] + ((b**3.0)-b)*d2[i2]) * (delk*delk)/6
+	
+	Tcrit = (t/1.76) * 1.1604e10
+	return Tcrit

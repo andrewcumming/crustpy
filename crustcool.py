@@ -11,11 +11,11 @@ tobs = numpy.array([52197.8,52563.2,52712.2,52768.9,53560.0,53576.7,54583.8,5611
 Teffobs = numpy.array([121,85,77,73,58,54,56,48.8])
 
 # Initialize the crust
-crust = Crust(mass=1.62,radius=11.2,ngrid=50,Qimp=6.0,Tc=3.1e7)
+crust = Crust(mass=1.62,radius=11.2,ngrid=100,Qimp=3.2,Tc=3.1e7)
 print(crust)
 
 # Set the top temperature and accrete
-crust.set_top_temperature(4.7e8)
+crust.set_top_temperature(4.2e8)
 t, Teff = crust.evolve(time=2.5*365.0,mdot=0.1)
 
 # store the initial temperature, conductivity and CV profile for the plots
@@ -23,6 +23,7 @@ rho, TT = crust.temperature_profile()
 K = numpy.array([item['Kcond'] for item in crust.grid])
 cve = numpy.array([item['CV_electrons'] for item in crust.grid])
 cvi = numpy.array([item['CV_ions'] for item in crust.grid])
+cvn = numpy.array([item['CV_neutrons'] for item in crust.grid])
 cv = numpy.array([item['CV'] for item in crust.grid])
 # print out crust profile just before cooling begins:
 #for item in crust.grid:
@@ -63,6 +64,7 @@ if 1:
 	plt.loglog(rho,cv)
 	plt.loglog(rho,cvi,':')
 	plt.loglog(rho,cve,'--')
+	plt.loglog(rho,cvn,'-.')
 	#plt.loglog(rho,cve+cvi)
 	plt.xlabel(r'$\rho (\mathrm{g/cm^3})$')
 	plt.ylabel(r'$C_V (\mathrm{erg/g/K})$')

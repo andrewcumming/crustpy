@@ -11,7 +11,7 @@ from bokeh.plotting import figure
 # Calculate the outburst and plot the lightcurve
 def do_outburst():
 	# Initialize the crust
-	crust = Crust(mass=params['M'],radius=params['R'],ngrid=30,Qimp=params['Qimp'],Tc=params['Tc'])
+	crust = Crust(mass=params['M'],radius=params['R'],ngrid=50,Qimp=params['Qimp'],Tc=params['Tc'])
 	print(crust)
 	# Set the top temperature and accrete
 	crust.set_top_temperature(params['Tb'])
