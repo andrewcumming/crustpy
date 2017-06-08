@@ -1,8 +1,13 @@
 #cython: boundscheck=False, wraparound=False, nonecheck=False, cdivision=True
 
 from scipy.optimize import brentq
-from libc.math cimport exp, log, sqrt
 
+cdef extern from "math.h":
+	double exp(double m)
+	double log(double m)
+	double sqrt(double m)
+	double MPI "M_PI"
+	        
 cdef extern:
 	void condegin_(double *temp,double *densi,double *B,double *Zion,double *CMI,
 			double *CMI1,double *Zimp, double *RSIGMA,double *RTSIGMA,
@@ -85,14 +90,13 @@ cdef double calculate_Kcond(double T,double Ye,double Z,double x,double Qimp,dou
 	# Thermal conductivity
 	cdef double lambda_ep
 	cdef double TU, TD, fep, lambda_eQ, feQ, fc
-	cdef double mypi = 3.141592654
 	# Phonon scattering frequency
 	lambda_ep=1.0		
 	TU=8.7*sqrt(rho)*(Ye/0.05)*(Z/30.0)**(1.0/3.0)
 	TD=3.5e3*Ye*sqrt(rho)
 	fep=1.247e10*T*lambda_ep*exp(-TU/T)/sqrt(1.0+(TD/(3.5*T))**2)
 	# Impurity scattering frequency
-	lambda_eQ=2.09 # = 0.5*log(1.0+0.4*137.0*mypi)*(1.0+2.5/(137.0*mypi))-0.5
+	lambda_eQ=2.09 # = 0.5*log(1.0+0.4*137.0*MPI)*(1.0+2.5/(137.0*MPI))-0.5
 	feQ=1.75e16*x*Qimp*lambda_eQ/Z
 	fc = fep+feQ
 	return 4.116e19*T*rho*Ye/(x*fc)
@@ -103,21 +107,19 @@ cdef double calculate_CV(double rho, double T,double TP,double Ye,double Yi,doub
 	
 cdef double CV_electrons(double T, double Ye, double EFermi):
 	# Electron contribution to the heat capacity
-	cdef double mypi = 3.141592654
-	return 7.12e-3*mypi**2*Ye*T/EFermi
+	return 7.12e-3*MPI**2*Ye*T/EFermi
 	
 cdef double CV_ions(double T, double TP, double Yi):
 	# Ion contribution to the heat capacity	
 	# from equation (5) of Chabrier 1993
 	cdef double eta, x, y, ex, ey, dd1, dd2, dd, fac
-	cdef double mypi = 3.141592654
 	eta=TP/T
 	# x is alpha eta,  y is gamma eta
 	x=0.399*eta
 	y=0.899*eta
 	ex=exp(x)
 	ey=exp(y)
-	dd1=mypi**4/(5*x**3) - 3.0*(6.0+x*(6.0+x*(3.0+x)))/(ex*x**3)
+	dd1=MPI**4/(5*x**3) - 3.0*(6.0+x*(6.0+x*(3.0+x)))/(ex*x**3)
 	dd2=1.0-0.375*x+0.05*x**2
 	dd=min(dd1,dd2)
 	fac=8.0*dd-6*x/(ex-1.0)+(y**2*ey/(ey-1.0)**2)
